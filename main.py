@@ -1,39 +1,36 @@
+import os
+from dotenv import load_dotenv
+
 from src.orchestrator import BotOrchestrator
-from src.fetchers import BasicHtmlFetcher
-from src.parsers import AiStudioParser, LocalLlmParser
+# ... (our other imports)
+
+# We'll need to update our class constructors to accept the secrets
+from src.parsers import AiStudioParser
 from src.writers import GoogleSheetWriter
+from src.fetchers import BasicHtmlFetcher
+
 
 def main():
-    """
-    This is the assembly point of our application.
-    Here, we decide which concrete implementations to use and
-    "inject" them into the orchestrator.
-    """
-    # === Configuration for Run 1: Standard MVP setup ===
-    print("ASSEMBLY 1: Using AI Studio Parser")
-    # 1. Create the concrete, low-level components.
-    fetcher = BasicHtmlFetcher()
-    parser = AiStudioParser()
-    writer = GoogleSheetWriter()
+    # Load variables from .env file into the environment
+    load_dotenv()
 
-    # 2. Inject these dependencies into the high-level module.
+    # Retrieve the secrets from the environment
+    ai_studio_key = os.getenv("AI_STUDIO_API_KEY")
+    sheets_creds_path = os.getenv("GOOGLE_SHEETS_CREDENTIALS_JSON_PATH")
+
+    # A check to make sure the secrets are loaded
+    if not ai_studio_key or not sheets_creds_path:
+        print("Error: Secrets not found. Make sure you have a .env file with the correct variables.")
+        return
+
+    # Now we pass the secrets to the constructors of the classes that need them.
+    # This is still Dependency Injection!
+    parser = AiStudioParser(api_key=ai_studio_key)
+    writer = GoogleSheetWriter(credentials_path=sheets_creds_path)
+    fetcher = BasicHtmlFetcher() # Doesn't need a secret
+
     bot = BotOrchestrator(fetcher=fetcher, parser=parser, writer=writer)
-
-    # 3. Run the business logic.
-    bot.process_single_url("https://www.amazon.com/dp/B08J65S221")
-
-    print("\n=======================================================\n")
-    
-    # === Configuration for Run 2: Swapping to a Local LLM ===
-    print("ASSEMBLY 2: Substituting Local LLM Parser")
-    # 1. We only need to create a different parser. Fetcher and Writer stay the same.
-    local_parser = LocalLlmParser()
-
-    # 2. Inject the new set of dependencies.
-    bot_2 = BotOrchestrator(fetcher=fetcher, parser=local_parser, writer=writer)
-
-    # 3. Run the same business logic. The orchestrator's code did not change.
-    bot_2.process_single_url("https://robu.in/product/raspberry-pi-4-model-b-4-gb-ram/")
+    bot.process_single_url("https://example.com")
 
 
 if __name__ == "__main__":
