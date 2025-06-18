@@ -1,6 +1,16 @@
-**Use Case Diagram**
+### Actors
 
-[Team Member] --(Posts Message)--> [Google Chat API]
+*   **Team Member:** The human user who posts messages in a Discord channel.
+*   **Discord API:** The external service our bot listens to for message events.
+*   **Web Server:** The server hosting the product page.
+*   **LLM API:** The AI Studio service.
+*   **Google Sheets API:** The data destination.
+
+### Use Case Diagram Flow
+
+The flow is now initiated by a Discord event.
+
+[Team Member] --(Posts Message)--> [Discord Bot]
                                           |
                                           | (Notifies our system)
                                           V
@@ -19,7 +29,7 @@
 **Class Diagram**
 
 +------------------+      uses      +--------------------+
-| BotOrchestrator  |--------------->| GoogleChatReader   |
+| BotOrchestrator  |--------------->| DiscordReader   |
 |------------------|                |--------------------|
 | + run()          |                | + get_new_messages()|
 +------------------+                +--------------------+
