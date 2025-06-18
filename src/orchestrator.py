@@ -1,27 +1,44 @@
+# HIGH-LEVEL MODULE: Depends only on ABSTRACTIONS (interfaces)
+from .fetchers import FetcherInterface
 from .parsers import ParserInterface
+from .writers import WriterInterface
 
 class BotOrchestrator:
-    # We use "Dependency Injection" to provide the parser
-    def __init__(self, parser: ParserInterface):
+    # Dependencies are INJECTED via the constructor.
+    def __init__(
+        self,
+        fetcher: FetcherInterface,
+        parser: ParserInterface,
+        writer: WriterInterface
+    ):
+        self._fetcher = fetcher
         self._parser = parser
-        print(f"Orchestrator initialized with {type(parser).__name__}.")
+        self._writer = writer
+        print(f"Orchestrator initialized with:")
+        print(f"  - Fetcher: {type(fetcher).__name__}")
+        print(f"  - Parser:  {type(parser).__name__}")
+        print(f"  - Writer:  {type(writer).__name__}")
 
     def process_single_url(self, url: str):
         """
-        This is the core logic for processing one URL.
+        This is the core business logic. Notice how it's clean, high-level,
+        and completely independent of any specific implementation details.
         """
-        print(f"\nProcessing URL: {url}")
+        print(f"\n--- Processing URL: {url} ---")
         
-        # In a real scenario, we'd call the HtmlFetcher here.
-        # For now, we'll use dummy HTML.
-        dummy_html = "<html><body><h1>Some Product</h1><p>Model: 123-XYZ</p></body></html>"
-        print("Step 1: Fetched HTML.")
+        # 1. Fetch
+        html_content = self._fetcher.fetch(url)
+        if not html_content:
+            print("Processing failed: Could not fetch HTML.")
+            return
 
-        # Here's the key part: The orchestrator doesn't know or care
-        # which parser it's using. It just calls .parse().
-        parsed_data = self._parser.parse(dummy_html)
-        print("Step 2: Parsed HTML.")
+        # 2. Parse
+        parsed_data = self._parser.parse(html_content)
+        if not parsed_data:
+            print("Processing failed: Could not parse HTML.")
+            return
 
-        # In a real scenario, we'd call the SheetWriter here.
-        print(f"Step 3: Writing '{parsed_data}' to Google Sheets.")
-        print("Process complete.")
+        # 3. Write
+        self._writer.write(parsed_data)
+        
+        print("--- Process complete. ---")
