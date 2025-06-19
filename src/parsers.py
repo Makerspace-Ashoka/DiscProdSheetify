@@ -13,7 +13,7 @@ class AiStudioParser(ParserInterface):
         self._api_key = api_key # Store the key for later use
 
     def parse(self, html: str) -> str:
-        print("Connecting to AI Studio with a key ending in '...{self._api_key[-4]}'")
+        print(f"Connecting to AI Studio with a key ending in '...{self._api_key[-4]}'")
         return "NVIDIA_RTX_4090-GA102-300-A1"
 
 # This is our second "device", ready for the future.

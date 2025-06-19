@@ -27,9 +27,9 @@ def main():
         print("FATAL: AI_STUDIO_API_KEY not found in .env file.")
         sys.exit(1)
 
-    sheets_creds_path = os.getenv("SERVICE_ACCOUNT_JSON_PATH")
+    sheets_creds_path = os.getenv("GOOGLE_SHEETS_CREDENTIALS_JSON_PATH")
     if not sheets_creds_path:
-        print("FATAL: SERVICE_ACCOUNT_JSON_PATH not found in .env file.")
+        print("FATAL: GOOGLE_SHEETS_CREDENTIALS_JSON_PATH not found in .env file.")
         sys.exit(1)
 
     # By this point, Pylance KNOWS that each of these variables must be a string.
