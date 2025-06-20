@@ -1,0 +1,2 @@
+1. **Fetcher Unreliability:** The `BasicHtmlFetcher` fails on some sites due to anti-scraping measures.
+2. **Parser Inconsistency:** The `AiStudioParser` is "brittle." Small changes in the prompt or different HTML structures cause it to fail or hallucinate incorrect data.

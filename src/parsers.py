@@ -46,6 +46,13 @@ If you cannot confidently determine both the name and the identifier, you MUST r
                     system_instruction=self._system_instruction
                 )
             )
+
+            # --- START OF CHECK ---
+            # Handle the potential for an empty or non-existent text response.
+            if response.text is None:
+                print("LLM returned no text. Parsing failed.")
+                return "ERROR_LLM_NO_RESPONSE"
+            # --- END OF CHECK ---
             
             # The response object itself might have changed, but .text is usually a safe bet.
             # .strip() remains essential for cleaning whitespace.
