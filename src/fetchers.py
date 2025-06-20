@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import requests # The de facto standard library for making HTTP requests in Python
+import requests
 
 class FetcherInterface(ABC):
     @abstractmethod
@@ -9,11 +9,16 @@ class FetcherInterface(ABC):
 
 class BasicHtmlFetcher(FetcherInterface):
     def fetch(self, url: str) -> str:
+        # This is a more convincing set of headers, mimicking a real browser on Windows.
+        headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Connection': 'keep-alive'
+        }
+        
         try:
-            # We add a User-Agent header to identify our bot. Many websites block
-            # requests from scripts with no User-Agent.
-            headers = {'User-Agent': 'ProductLinkScraperBot/1.0'}
-            
             print(f"Fetching HTML from {url}...")
             # We set a timeout to prevent our bot from hanging indefinitely on a slow website.
             response = requests.get(url, headers=headers, timeout=10)

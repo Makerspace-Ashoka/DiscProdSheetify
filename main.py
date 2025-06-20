@@ -11,11 +11,16 @@ from src.writers import GoogleSheetWriter
 
 
 def main():
-    # Load variables from .env file into the environment
-    load_dotenv()
-
     # --- Configuration and Secret Loading ---
-    # We check each critical variable one by one.
+    
+    # Build a path to the .env file inside the 'config' directory.
+    # os.path.dirname(__file__) gets the directory of the current script (our root).
+    # os.path.join() correctly combines them into a path like 'D:/.../product_scraper_bot/config/.env'.
+    project_root = os.path.dirname(__file__)
+    dotenv_path = os.path.join(project_root, 'config', '.env')
+    
+    # Load the .env file from the specified path.
+    load_dotenv(dotenv_path=dotenv_path)
     
     discord_token = os.getenv("DISCORD_BOT_TOKEN")
     if not discord_token:
