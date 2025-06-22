@@ -36,6 +36,16 @@ def main():
     if not sheets_creds_path:
         print("FATAL: GOOGLE_SHEETS_CREDENTIALS_JSON_PATH not found in .env file.")
         sys.exit(1)
+    
+    sheet_id = os.getenv("GOOGLE_SHEET_ID")
+    if not sheet_id:
+        print("FATAL: GOOGLE_SHEET_ID not found in .env file.")
+        sys.exit(1)
+
+    sheet_name = os.getenv("GOOGLE_SHEET_NAME")
+    if not sheet_name:
+        print("FATAL: GOOGLE_SHEET_NAME not found in .env file.")
+        sys.exit(1)
 
     # By this point, Pylance KNOWS that each of these variables must be a string.
     # The "None" timeline was terminated by sys.exit().
@@ -44,7 +54,11 @@ def main():
     print("Assembling components...")
     fetcher = BasicHtmlFetcher()
     parser = AiStudioParser(api_key=ai_studio_key)
-    writer = GoogleSheetWriter(credentials_path=sheets_creds_path)
+    writer = GoogleSheetWriter(
+        credentials_path=sheets_creds_path,
+        spreadsheet_id=sheet_id,
+        sheet_name=sheet_name
+    )
     
     orchestrator = BotOrchestrator(fetcher=fetcher, parser=parser, writer=writer)
     discord_reader = DiscordReader(bot_token=discord_token, orchestrator=orchestrator)
