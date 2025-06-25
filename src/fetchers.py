@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
 import requests
+import time
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 class FetcherInterface(ABC):
     @abstractmethod
@@ -36,3 +40,43 @@ class BasicHtmlFetcher(FetcherInterface):
             # We return an empty string to signal failure to the orchestrator.
             # This is a predictable, safe value.
             return ""
+
+class SeleniumFetcher(FetcherInterface):
+    """
+    A fetcher that uses a real browser to load a page, take a screenshot,
+    and return the path to the screenshot file.
+    """
+    def fetch(self, url: str) -> str:
+        # Configure Chrome to run in "headless" mode (no visible UI)
+        chrome_options = Options()
+        #chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--window-size=1920,1080") # A standard desktop resolution
+
+        driver = None # Initialize to None
+        try:
+            # Selenium Manager automatically handles the chromedriver. Magic!
+            driver = webdriver.Chrome(options=chrome_options)
+            
+            print(f"Selenium is navigating to {url}...")
+            driver.get(url)
+            
+            # Wait for a few seconds to let JavaScript load.
+            # A more advanced solution uses WebDriverWait, but this is fine for V2.
+            time.sleep(5)
+            
+            # Define where to save the screenshot.
+            screenshot_path = "product_screenshot.png"
+            driver.save_screenshot(screenshot_path)
+            print(f"Screenshot saved to {screenshot_path}")
+            
+            # Return the path to the file.
+            return screenshot_path
+
+        except Exception as e:
+            print(f"An error occurred during Selenium fetching: {e}")
+            return "" # Return empty string on failure
+        
+        finally:
+            # CRITICAL: Always close the browser to avoid memory leaks.
+            if driver:
+                driver.quit()

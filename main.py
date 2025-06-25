@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 # Import our components
 from src.orchestrator import BotOrchestrator
 from src.discord_reader import DiscordReader
-from src.fetchers import BasicHtmlFetcher
-from src.parsers import AiStudioParser
+from src.fetchers import BasicHtmlFetcher, SeleniumFetcher
+from src.parsers import AiStudioParser, GeminiImageParser
 from src.writers import GoogleSheetWriter
 
 
@@ -51,9 +51,9 @@ def main():
     # The "None" timeline was terminated by sys.exit().
 
     # --- Component Assembly ---
-    print("Assembling components...")
-    fetcher = BasicHtmlFetcher()
-    parser = AiStudioParser(api_key=ai_studio_key)
+    print("Assembling v2 components...")
+    fetcher = SeleniumFetcher()
+    parser = GeminiImageParser(api_key=ai_studio_key)
     writer = GoogleSheetWriter(
         credentials_path=sheets_creds_path,
         spreadsheet_id=sheet_id,
