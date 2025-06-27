@@ -8,3 +8,6 @@ src/__pycache__/
 config/
 config/.env
 docs/logs.txt
+
+# Ignore log files
+logs/

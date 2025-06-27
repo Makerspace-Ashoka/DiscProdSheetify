@@ -1,18 +1,29 @@
-from abc import ABC, abstractmethod
 import requests
 import time
 import os
+import asyncio
+import logging
+import re
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service as ChromeService
+from .interfaces import FetcherInterface
 
-class FetcherInterface(ABC):
-    @abstractmethod
-    def fetch(self, url: str) -> str:
-        """Takes a URL and returns the HTML content as a string."""
-        pass
+# Each module should get its own logger instance.
+logger = logging.getLogger(__name__)
 
+# The BasicHtmlFetcher is deprecated in favor of SeleniumFetcher and needs to be adapted to be async before using it in the future.
 class BasicHtmlFetcher(FetcherInterface):
-    def fetch(self, url: str) -> str:
+    async def fetch(self, url: str) -> str:
+        """
+        Fetches the HTML content of a given URL using the requests library.
+        This is a simple fetcher that does not execute JavaScript.
+        """
+        # We wrap the blocking requests call in asyncio.to_thread to avoid blocking the event loop.
+        return await asyncio.to_thread(self._blocking_fetch, url)
+    
+    def _blocking_fetch(self, url: str) -> str:
         # This is a more convincing set of headers, mimicking a real browser on Windows.
         headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -46,34 +57,52 @@ class SeleniumFetcher(FetcherInterface):
     A fetcher that uses a real browser to load a page, take a screenshot,
     and return the path to the screenshot file.
     """
-    def fetch(self, url: str) -> str:
+    def __init__(self):
+        self.screenshot_dir = os.path.join("logs", "screenshots")
+        os.makedirs(self.screenshot_dir, exist_ok=True)  # Ensure the directory exists
+        logger.info(f"Screenshots will be saved to: {self.screenshot_dir}")
+    
+    async def fetch(self, url: str) -> str:
+        # We wrap the entire blocking selenium logic in asyncio.to_thread
+        return await asyncio.to_thread(self._blocking_fetch, url)
+    
+    def _blocking_fetch(self, url: str) -> str:
         # Configure Chrome to run in "headless" mode (no visible UI)
         chrome_options = Options()
         #chrome_options.add_argument("--headless")
         chrome_options.add_argument("--window-size=1920,1080") # A standard desktop resolution
 
+        # --- FIX: Silence Selenium DevTools logging ---
+        chrome_options.add_argument("--log-level=3") # Only show fatal errors
+        chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        service = ChromeService(log_path=os.devnull) # Send webdriver logs to nirvana
+
         driver = None # Initialize to None
         try:
             # Selenium Manager automatically handles the chromedriver. Magic!
-            driver = webdriver.Chrome(options=chrome_options)
-            
-            print(f"Selenium is navigating to {url}...")
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+            logger.info(f"Selenium navigating to {url}...")
             driver.get(url)
             
             # Wait for a few seconds to let JavaScript load.
             # A more advanced solution uses WebDriverWait, but this is fine for V2.
             time.sleep(5)
             
-            # Define where to save the screenshot.
-            screenshot_path = "product_screenshot.png"
-            driver.save_screenshot(screenshot_path)
-            print(f"Screenshot saved to {screenshot_path}")
+            # --- NEW: Screenshot naming and logging ---
+            timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            # Sanitize the URL to create a safe filename
+            sanitized_url = re.sub(r'https?://(www\.)?', '', url)
+            sanitized_url = re.sub(r'[\\/:*?"<>|]', '_', sanitized_url)[:75] # Keep it reasonably short
             
-            # Return the path to the file.
+            filename = f"{timestamp}_{sanitized_url}.png"
+            screenshot_path = os.path.join(self.screenshot_dir, filename)
+            
+            driver.save_screenshot(screenshot_path)
+            logger.info(f"Screenshot saved to {screenshot_path}")
             return screenshot_path
 
         except Exception as e:
-            print(f"An error occurred during Selenium fetching: {e}")
+            logger.error(f"Selenium failed to fetch {url}: {e}", exc_info=True)
             return "" # Return empty string on failure
         
         finally:

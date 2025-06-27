@@ -1,20 +1,21 @@
 import discord
+import asyncio
+import logging
 from urllib.parse import urlparse
 
-# We need a reference to our orchestrator to pass the work to.
-from .orchestrator import BotOrchestrator
+logger = logging.getLogger(__name__)
 
 class DiscordReader:
     """
     This class is responsible for connecting to Discord, listening for messages,
     and delegating valid product links to the BotOrchestrator.
     """
-    def __init__(self, bot_token: str, orchestrator: BotOrchestrator):
+    def __init__(self, bot_token: str, work_queue: asyncio.Queue):
         if not bot_token:
             raise ValueError("Discord bot token cannot be empty.")
         
         self._token = bot_token
-        self._orchestrator = orchestrator
+        self._queue = work_queue
         
         # We need to tell the discord.py client which events we want to listen to.
         intents = discord.Intents.default()
@@ -24,15 +25,16 @@ class DiscordReader:
         # Register our event handlers
         self._client.event(self.on_ready)
         self._client.event(self.on_message)
+        logger.info("DiscordReader initialized.")
 
-    def run(self):
-        """Starts the bot."""
-        print("Discord bot is starting...")
-        self._client.run(self._token)
+    async def start(self):
+        """Starts the bot using the non-blocking start method."""
+        logger.info("Discord bot is starting...")
+        await self._client.start(self._token)
 
     async def on_ready(self):
         """Called when the bot successfully connects to Discord."""
-        print(f'Bot logged in as {self._client.user}')
+        logger.info(f'Bot logged in as {self._client.user}')
 
     async def on_message(self, message: discord.Message):
         """Called every time a message is sent in a channel the bot can see."""
@@ -46,9 +48,7 @@ class DiscordReader:
                 result = urlparse(word)
                 # A simple check if it looks like a real URL
                 if all([result.scheme, result.netloc]):
-                    print(f"Found URL: {word} from user {message.author}")
-                    # This is the handoff! The reader's job is done.
-                    # It calls the orchestrator, which is completely unaware of Discord.
-                    self._orchestrator.process_single_url(word)
+                    logger.info(f"Found URL: {word} from user {message.author}, adding to work queue.")
+                    await self._queue.put(word)
             except ValueError:
                 continue # Not a valid URL, ignore

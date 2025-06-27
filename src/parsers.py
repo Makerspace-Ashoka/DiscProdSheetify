@@ -1,16 +1,15 @@
-from abc import ABC, abstractmethod
-# The SDK import remains the same, but how we use it changes.
 import google.genai as genai
 from google.genai import types
 import os
 import PIL.Image
+import asyncio
+import logging
+from .interfaces import ParserInterface
 
-class ParserInterface(ABC):
-    @abstractmethod
-    def parse(self, html: str) -> str:
-        """Takes HTML content and returns a formatted string 'item_name-product_identifier'."""
-        pass
+logger = logging.getLogger(__name__)
 
+# The AiStudioParser class is deprecated in favor of GeminiImageParser and needs to be adapeted to be async and use logging 
+# before using it in the future.
 class AiStudioParser(ParserInterface):
     def __init__(self, api_key: str):
         if not api_key:
@@ -36,7 +35,8 @@ If you cannot confidently determine both the name and the identifier, you MUST r
 """
         print("AiStudioParser initialized with new client model.")
 
-    def parse(self, html: str) -> str:
+    async def parse(self, content_path_or_html: str) -> str:
+        html = content_path_or_html
         try:
             print("Sending HTML to Gemini 2.0 Flash for parsing...")
             
@@ -91,48 +91,33 @@ Examples:
 
 If you cannot confidently determine both the name and the identifier, you MUST return the exact string: ERROR_CANNOT_PARSE
 """
-        print("GeminiImageParser initialized.")
+        logger.info("GeminiImageParser initialized.")
 
-    def parse(self, image_path: str) -> str:
-        # The 'parse' method now receives a file path string.
-        print(f"Opening image file: {image_path}")
+    async def parse(self, content_path_or_html: str) -> str:
+        image_path = content_path_or_html
+        return await asyncio.to_thread(self._blocking_parse, image_path)
+
+    def _blocking_parse(self, image_path: str) -> str:
+        logger.info(f"Parser starting work on {image_path}")
         try:
             img = PIL.Image.open(image_path)
-            
-            print("Sending image to Gemini 2.0 Flash for parsing...")
-            
-            # The 'contents' is now a list containing both the image and a text prompt.
-            # We don't need to send the system instruction again if we want to ask follow-up questions,
-            # but for a single call, it can be included here as well.
+            logger.info(f"Sending {image_path} to Gemini API...")
             response = self._client.models.generate_content(
                 model="gemini-2.0-flash",
-                contents=[img], # Send the image object directly
-                config=types.GenerateContentConfig(
-                    system_instruction=self._system_instruction
-                )
+                contents=[img],
+                config=types.GenerateContentConfig(system_instruction=self._system_instruction)
             )
             
             if response.text is None:
-                print("LLM returned no text. Parsing failed.")
+                logger.warning("LLM returned no text.")
                 return "ERROR_LLM_NO_RESPONSE"
                 
             parsed_data = response.text.strip()
-            print(f"LLM returned: '{parsed_data}'")
+            logger.info(f"LLM returned: '{parsed_data}'")
             return parsed_data
-
         except FileNotFoundError:
-            print(f"Error: Image file not found at {image_path}")
+            logger.error(f"Parser error: Image file not found at {image_path}")
             return "ERROR_FILE_NOT_FOUND"
         except Exception as e:
-            print(f"An error occurred during image parsing: {e}")
+            logger.error(f"Gemini API call failed for {image_path}: {e}", exc_info=True)
             return "ERROR_API_CALL_FAILED"
-        finally:
-            # Clean up the screenshot file after we're done with it.
-            if os.path.exists(image_path):
-                os.remove(image_path)
-                print(f"Cleaned up {image_path}")
-
-# The LocalLlmParser remains untouched, a testament to our decoupled design.
-class LocalLlmParser(ParserInterface):
-    def parse(self, html: str) -> str:
-        return "Local_LLM_Parser_Result-DUMMY_MODEL"
