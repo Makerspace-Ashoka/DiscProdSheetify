@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 class FetcherInterface(ABC):
     @abstractmethod
-    async def fetch(self, url: str) -> str:
+    async def fetch(self, url: str, headless: bool) -> str:
         """Asynchronously fetches content and returns a path (for images) or the content itself (for HTML)."""
         pass
 

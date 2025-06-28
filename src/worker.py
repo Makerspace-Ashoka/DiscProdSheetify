@@ -19,12 +19,29 @@ class ProcessingWorker:
         async with self._semaphore:
             logger.info(f"Worker starting job for: {url}")
             try:
-                content_path = await self._fetcher.fetch(url)
+                # --- ATTEMPT 1: Default Headless Fetch ---
+                logger.info(f"Attempt 1 (Headless) for URL: {url}")
+                content_path = await self._fetcher.fetch(url, headless=True)
                 if not content_path:
                     logger.warning(f"Fetching failed for {url}. Aborting job.")
                     return
 
                 parsed_data = await self._parser.parse(content_path)
+
+                # --- DECISION POINT: Analyze Parser's Output ---
+                if parsed_data == "ERROR_CAPTCHA_DETECTED":
+                    logger.warning(f"CAPTCHA detected on first attempt for {url}. Retrying in headed mode.")
+
+                    # --- ATTEMPT 2: Headed Fetch Fallback ---
+                    content_path = await self._fetcher.fetch(url, headless=False)
+                    if not content_path:
+                        logger.error(f"Headed fallback fetch also failed for {url}. Aborting job.")
+                        return
+                    
+                    # Re-parse the new screenshot
+                    parsed_data = await self._parser.parse(content_path)
+
+                # --- FINAL CHECK AND WRITE ---
                 if "ERROR" in parsed_data:
                     logger.warning(f"Parsing failed for {url} with result: {parsed_data}. Aborting job.")
                     return

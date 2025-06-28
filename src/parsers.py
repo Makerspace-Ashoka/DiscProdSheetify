@@ -77,7 +77,10 @@ class GeminiImageParser(ParserInterface):
             raise ValueError("AI Studio API key cannot be empty.")
         self._client = genai.Client(api_key=api_key)
         self._system_instruction = """
-You are an expert visual data extraction bot. Your task is to analyze a screenshot of an e-commerce product page and extract two pieces of information: the product's primary name and its main model number or product identifier.
+You are an expert visual data extraction bot. Your first and most important task is to determine if the provided screenshot is a CAPTCHA page, a "prove you are human" challenge, a "click to continue" button, or any other form of interstitial that is blocking the main product content.
+
+- If you detect any such blocker, you MUST return the exact string: ERROR_CAPTCHA_DETECTED
+- Otherwise, your task is to analyze the e-commerce product page screenshot and extract two pieces of information: the product's primary name and its main model number.
 
 Combine these two pieces of information into a single string with a hyphen separator in the format: item_name-product_identifier.
 - Replace spaces in the item name with underscores.
@@ -91,7 +94,7 @@ Examples:
 
 If you cannot confidently determine both the name and the identifier, you MUST return the exact string: ERROR_CANNOT_PARSE
 """
-        logger.info("GeminiImageParser initialized.")
+        logger.info("GeminiImageParser initialized with CAPTCHA detection prompt.")
 
     async def parse(self, content_path_or_html: str) -> str:
         image_path = content_path_or_html
