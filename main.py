@@ -20,9 +20,14 @@ logger = logging.getLogger(__name__)
 async def queue_consumer(work_queue: asyncio.Queue, worker: ProcessingWorker):
     logger.info("Queue consumer started.")
     while True:
-        url = await work_queue.get()
-        logger.info(f"Got URL from queue: {url}. Creating task.")
-        asyncio.create_task(worker.process_url(url))
+        # We now get a WorkItem object from the queue.
+        work_item = await work_queue.get()
+
+        # --- DEBUGGING LOG ---
+        logger.info(f"Got object of type {type(work_item).__name__} from queue.")
+
+        logger.info(f"Got item from queue for URL: {work_item.url}. Creating task.")
+        asyncio.create_task(worker.process_url(work_item))
         # We mark the task as done immediately for the queue.
         # The actual work happens in the background.
         work_queue.task_done()

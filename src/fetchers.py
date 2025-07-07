@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # The BasicHtmlFetcher is deprecated in favor of SeleniumFetcher and needs to be adapted to be async before using it in the future.
 class BasicHtmlFetcher(FetcherInterface):
-    async def fetch(self, url: str) -> str:
+    async def fetch(self, url: str, headless: bool) -> str:
         """
         Fetches the HTML content of a given URL using the requests library.
         This is a simple fetcher that does not execute JavaScript.
@@ -62,20 +62,30 @@ class SeleniumFetcher(FetcherInterface):
         os.makedirs(self.screenshot_dir, exist_ok=True)  # Ensure the directory exists
         logger.info(f"Screenshots will be saved to: {self.screenshot_dir}")
     
-    async def fetch(self, url: str) -> str:
+    async def fetch(self, url: str, headless: bool = True) -> str:
+        """
+        Asynchronously fetches a URL using Selenium.
+        Cab be run in either headless (default) or headed mode.
+        """
         # We wrap the entire blocking selenium logic in asyncio.to_thread
-        return await asyncio.to_thread(self._blocking_fetch, url)
+        return await asyncio.to_thread(self._blocking_fetch, url, headless)
     
-    def _blocking_fetch(self, url: str) -> str:
+    def _blocking_fetch(self, url: str, headless: bool) -> str:
         # Configure Chrome to run in "headless" mode (no visible UI)
         chrome_options = Options()
-        #chrome_options.add_argument("--headless")
+
+        if headless:
+            logger.info("Running Selenium in HEADLESS mode.")
+            chrome_options.add_argument("--headless")  # Run in headless mode
+        else:
+            logger.info("Running Selenium in HEADED mode.")
+
         chrome_options.add_argument("--window-size=1920,1080") # A standard desktop resolution
 
         # --- FIX: Silence Selenium DevTools logging ---
         chrome_options.add_argument("--log-level=3") # Only show fatal errors
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        service = ChromeService(log_path=os.devnull) # Send webdriver logs to nirvana
+        service = ChromeService(log_path=os.devnull)
 
         driver = None # Initialize to None
         try:

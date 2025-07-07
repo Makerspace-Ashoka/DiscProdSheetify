@@ -2,6 +2,7 @@ import discord
 import asyncio
 import logging
 from urllib.parse import urlparse
+from .data_models import WorkItem
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,17 @@ class DiscordReader:
                 # A simple check if it looks like a real URL
                 if all([result.scheme, result.netloc]):
                     logger.info(f"Found URL: {word} from user {message.author}, adding to work queue.")
-                    await self._queue.put(word)
+                    # Create a complete WorkItem
+                    item = WorkItem(
+                        url=word,
+                        message_content=message.content,
+                        user_name=message.author.name
+                    )
+
+                    # --- DEBUGGING LOG ---
+                    logger.info(f"Putting object of type {type(item).__name__} onto queue for URL: {item.url}")
+
+                    await self._queue.put(item)
+                    logger.info(f"Work item for {word} added to queue.")
             except ValueError:
                 continue # Not a valid URL, ignore
