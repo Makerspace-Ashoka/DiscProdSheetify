@@ -5,7 +5,7 @@ from .interfaces import WriterInterface
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from .data_models import ProductInfo
+from .data_models import EnrichedProductInfo # Import the new model
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +26,11 @@ class GoogleSheetWriter(WriterInterface):
         "Total Cost", "Availability", "Est. Delivery", "URL"
     ]
 
-    async def write(self, data: ProductInfo):
+    async def write(self, data: EnrichedProductInfo): # Update input type
         """Asynchronously writes a ProductInfo object to the sheet."""
         await asyncio.to_thread(self._blocking_write, data)
     
-    def _blocking_write(self, data: ProductInfo):
+    def _blocking_write(self, data: EnrichedProductInfo): # Update input type
         """
         Contains the synchronous, blocking Google Sheets API call.
         CRITICALLY, it now creates its own service object for thread safety.
@@ -54,17 +54,18 @@ class GoogleSheetWriter(WriterInterface):
                     body={'values': [self.HEADER]}
                 ).execute()
 
-            # --- Format the data into a list for the new row ---
+            # --- Unpack the data from our two sources ---
+            ai = data.ai_data
             new_row = [
-                data.processed_timestamp, data.requesting_user, data.platform,
-                data.item_name, data.model_number, data.generic_name,
-                data.category, data.quantity_required, data.price_per_unit,
-                str(data.is_gst_included) if data.is_gst_included is not None else "N/A",
-                data.total_cost, data.availability, data.estimated_delivery,
+                data.processed_timestamp, data.requesting_user, ai.platform,
+                ai.item_name, ai.model_number, ai.generic_name,
+                ai.category, ai.quantity_required, ai.price_per_unit,
+                str(ai.is_gst_included) if ai.is_gst_included is not None else "N/A",
+                ai.total_cost, ai.availability, ai.estimated_delivery,
                 data.source_url
             ]
             
-            logger.info(f"Writing structured data for '{data.item_name}' to Google Sheet...")
+            logger.info(f"Writing structured data for '{ai.item_name}' to Google Sheet...")
             sheet.values().append(
                 spreadsheetId=self._spreadsheet_id,
                 range=self._sheet_name,
@@ -74,4 +75,4 @@ class GoogleSheetWriter(WriterInterface):
             logger.info("Write successful.")
             
         except Exception as e:
-            logger.error(f"An unexpected error occurred in _blocking_write for '{data.item_name}': {e}", exc_info=True)
+            logger.error(f"An unexpected error occurred in _blocking_write for '{ai.item_name}': {e}", exc_info=True)

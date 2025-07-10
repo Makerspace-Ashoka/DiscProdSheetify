@@ -4,7 +4,7 @@ import PIL.Image
 import google.genai as genai
 from google.genai import types
 from .interfaces import ParserInterface
-from .data_models import ProductInfo
+from .data_models import AiProductInfo # Import the new model
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +21,12 @@ class GeminiImageParser(ParserInterface):
         self._system_instruction = """You are an expert visual data extraction bot for electronics components and e-commerce websites."""
         logger.info("GeminiImageParser initialized with and structured output and CAPTCHA detection prompt.")
 
-    async def parse(self, content_path_or_html: str, user_message: str) -> ProductInfo:
+    async def parse(self, content_path_or_html: str, user_message: str) -> AiProductInfo: # Update return type
         """Parses an image and user message, returning a structured ProductInfo object."""
         image_path = content_path_or_html
         return await asyncio.to_thread(self._blocking_parse, image_path, user_message)
 
-    def _blocking_parse(self, image_path: str, user_message: str) -> ProductInfo:
+    def _blocking_parse(self, image_path: str, user_message: str) -> AiProductInfo: # Update return type
         logger.info(f"Parser starting structured extraction for {image_path}")
         try:
             img = PIL.Image.open(image_path)
@@ -47,21 +47,18 @@ class GeminiImageParser(ParserInterface):
                 # Contents now contains the text prompt AND the image
                 config={
                     "response_mime_type": "application/json",
-                    "response_schema": ProductInfo,
+                    "response_schema": AiProductInfo, # Use the AI-specific schema
                 }
             )
                 
             # The SDK automatically parses the JSON into our Pydantic object.
             parsed_result = response.parsed
 
-            if not isinstance(parsed_result, ProductInfo):
+            if not isinstance(parsed_result, AiProductInfo):
                 logger.error(f"LLM did not return the expected ProductInfo object. Got type: {type(parsed_result)}")
                 # We still need to return a valid ProductInfo object on failure.
-                return ProductInfo(
+                return AiProductInfo(
                     is_captcha=False,
-                    processed_timestamp="",
-                    requesting_user="",
-                    source_url="",
                     item_name="ERROR_INVALID_TYPE",
                     model_number=None,
                     generic_name=None,
@@ -75,17 +72,14 @@ class GeminiImageParser(ParserInterface):
                     quantity_required=None
                 )
 
-            parsed_object: ProductInfo = parsed_result
+            parsed_object: AiProductInfo = parsed_result
             logger.info(f"LLM returned structured data for {image_path}")
             return parsed_object
 
         except Exception as e:
             logger.error(f"Structured parsing failed for {image_path}: {e}", exc_info=True)
             # --- PROVIDE ALL REQUIRED FIELDS ---
-            return ProductInfo(
-                processed_timestamp="",
-                requesting_user="",
-                source_url="",
+            return AiProductInfo(
                 is_captcha=False,
                 item_name="ERROR_API_CALL",
                 # Provide None for all optional fields
