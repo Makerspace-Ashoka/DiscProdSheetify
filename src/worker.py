@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo # <-- ADD THIS IMPORT
 from .data_models import WorkItem, AiProductInfo, EnrichedProductInfo
 from .interfaces import FetcherInterface, ParserInterface, WriterInterface
 
@@ -71,7 +70,7 @@ class ProcessingWorker:
                 # Enrich the data with info the LLM can't know
                 final_record = EnrichedProductInfo(
                     ai_data=ai_result,
-                    processed_timestamp=datetime.now(ZoneInfo("Asia/Kolkata")).isoformat(),
+                    processed_timestamp=datetime.now(timezone.utc).isoformat(),
                     requesting_user=item.user_name,
                     source_url=item.url # We can add sanitization here later
                 )
