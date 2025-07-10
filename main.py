@@ -74,17 +74,26 @@ async def main():
     # By this point, Pylance KNOWS that each of these variables must be a string.
     # The "None" timeline was terminated by sys.exit().
 
-    # --- Assemble Components ---
-    logger.info("Assembling V3 components...")
+    # --- Create a single config dictionary ---
+    component_config = {
+        "api_key": ai_studio_key,
+        "creds_path": sheets_creds_path,
+        "sheet_id": sheet_id,
+        "sheet_name": sheet_name,
+    }
+
+    # --- Assemble by passing CLASSES and CONFIG ---
+    logger.info("Assembling V4 components...")
     work_queue = asyncio.Queue()
-    fetcher: FetcherInterface = SeleniumFetcher()
-    parser: ParserInterface = GeminiImageParser(api_key=ai_studio_key)
-    writer: WriterInterface = GoogleSheetWriter(
-        credentials_path=sheets_creds_path,
-        spreadsheet_id=sheet_id,
-        sheet_name=sheet_name
+    
+    worker = ProcessingWorker(
+        fetcher_class=SeleniumFetcher,
+        parser_class=GeminiImageParser,
+        writer_class=GoogleSheetWriter,
+        component_config=component_config,
+        max_concurrent_jobs=3
     )
-    worker = ProcessingWorker(fetcher, parser, writer, max_concurrent_jobs=3)
+    
     discord_reader = DiscordReader(bot_token=discord_token, work_queue=work_queue)
 
     # --- Start All Services ---
