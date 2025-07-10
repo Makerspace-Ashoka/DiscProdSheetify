@@ -4,14 +4,25 @@ import os
 import asyncio
 import logging
 import re
+import random
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 from .interfaces import FetcherInterface
 
 # Each module should get its own logger instance.
 logger = logging.getLogger(__name__)
+
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+]
 
 # The BasicHtmlFetcher is deprecated in favor of SeleniumFetcher and needs to be adapted to be async before using it in the future.
 class BasicHtmlFetcher(FetcherInterface):
@@ -82,6 +93,13 @@ class SeleniumFetcher(FetcherInterface):
 
         chrome_options.add_argument("--window-size=1920,1080") # A standard desktop resolution
 
+        # --- STEALTH OPTIONS ---
+        chrome_options.add_argument(f'user-agent={random.choice(USER_AGENTS)}')
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        # --- END STEALTH ---
+
         # --- FIX: Silence Selenium DevTools logging ---
         chrome_options.add_argument("--log-level=3") # Only show fatal errors
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -91,12 +109,19 @@ class SeleniumFetcher(FetcherInterface):
         try:
             # Selenium Manager automatically handles the chromedriver. Magic!
             driver = webdriver.Chrome(service=service, options=chrome_options)
-            logger.info(f"Selenium navigating to {url}...")
+            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+            logger.info(f"StealthFetcher navigating to {url}")
             driver.get(url)
             
-            # Wait for a few seconds to let JavaScript load.
-            # A more advanced solution uses WebDriverWait, but this is fine for V2.
-            time.sleep(5)
+            # --- INTELLIGENT WAIT ---
+            # Wait up to 15 seconds for an element with the tag 'body' to be present.
+            # This is much more reliable than time.sleep().
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            time.sleep(random.uniform(5, 8)) # A small, randomized sleep to mimic human pause
+            # --- END WAIT ---
             
             # --- NEW: Screenshot naming and logging ---
             timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
