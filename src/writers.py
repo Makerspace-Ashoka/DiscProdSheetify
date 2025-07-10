@@ -75,4 +75,4 @@ class GoogleSheetWriter(WriterInterface):
             logger.info("Write successful.")
             
         except Exception as e:
-            logger.error(f"An unexpected error occurred in _blocking_write for '{ai.item_name}': {e}", exc_info=True)
+            logger.error(f"An unexpected error occurred in _blocking_write for '{data.ai_data.item_name}': {e}", exc_info=True)
