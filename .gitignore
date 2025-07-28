@@ -12,3 +12,6 @@ docs/logs.txt
 
 # Ignore log files
 logs/
+
+# VS Code settings
+.vscode/
