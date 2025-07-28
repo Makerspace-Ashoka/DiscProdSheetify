@@ -1,0 +1,44 @@
+name: Deploy Discord Bot to VM
+
+# This workflow runs on two conditions:
+    # 1. A push event to the 'main' branch.
+    # 2. A 'workflow_dispatch' event, which adds a "Run workflow" button on the Actions tab.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+    deploy:
+        # Use the latest version of Ubuntu for our runner environment.
+        runs-on: ubuntu-latest
+
+        steps:
+            # Step 1: Check out the repository code into the runner.
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            # Step 2: SSH into the VM and run the deployment commands.
+            - name: Deploy to VM
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.SSH_HOST }}
+                username: ${{ secrets.SSH_USER }}
+                key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+                # The sequence of commands to run on the VM.
+                # These are run one after another. If any command fails, the whole job fails.
+                scripts: |
+                  # Navigate to the project directory on the VM.
+                  cd /home/${{ secrets.SSH_USER }}/DiscProdSheetify
+
+                  # Pull the latest code from the 'main' branch.
+                  git pull origin main
+
+                  # Install/update Python dependencies using the full path to uv.
+                  /home/${{ secrets.SSH_USER }}/.local/bin/uv install
+
+                  # Use systemctl to restart the Discord bot service.
+                  sudo systemctl restart DiscProdSheetify.service
