@@ -12,33 +12,33 @@ on:
 
 jobs:
     deploy:
-        # Use the latest version of Ubuntu for our runner environment.
-        runs-on: ubuntu-latest
+        # Tell GitHub to send this job to any available runner with the 'self-hosted' label.
+        runs-on: self-hosted
 
         steps:
-            # Step 1: Check out the repository code into the runner.
+            # Step 1: Check out the repository code into the runner's working directory on the VM.
             - name: Checkout code
               uses: actions/checkout@v4
 
-            # Step 2: SSH into the VM and run the deployment commands.
-            - name: Deploy to VM
-              uses: appleboy/ssh-action@master
-              with:
-                host: ${{ secrets.SSH_HOST }}
-                username: ${{ secrets.SSH_USER }}
-                key: ${{ secrets.SSH_PRIVATE_KEY }}
+            # Step 2: Run the deployment commands directly on the VM's shell.
+            - name: Deploy Bot
+              run: |
+                echo "--- Starting deployment on self-hosted runner ---"
 
-                # The sequence of commands to run on the VM.
-                # These are run one after another. If any command fails, the whole job fails.
-                scripts: |
-                  # Navigate to the project directory on the VM.
-                  cd /home/${{ secrets.SSH_USER }}/DiscProdSheetify
+                # Use rsync to mirror the repository to the project directory.
+                # CRITICAL: --exclude-from='.gitignore' prevents rsync from deleting
+                # secrets, logs, and virtual environment on the server.
+                rsync -av --delete --exclude-from='.gitignore' ./ /home/makerspace/DiscProdSheetify/
 
-                  # Pull the latest code from the 'main' branch.
-                  git pull origin main
+                echo "--- Code synchronized to project directory ---"
 
-                  # Install/update Python dependencies using the full path to uv.
-                  /home/${{ secrets.SSH_USER }}/.local/bin/uv install
+                # Run the commands from within the actual project directory.
+                cd /home/makerspace/DiscProdSheetify
+              
+                echo "--- Installing dependencies ---"
+                /home/makerspace/.local/bin/uv sync
 
-                  # Use systemctl to restart the Discord bot service.
-                  sudo systemctl restart DiscProdSheetify.service
+                echo "--- Restarting service ---"
+                sudo systemctl restart DiscProdSheetify.service
+          
+                echo "--- Deployment complete ---"
