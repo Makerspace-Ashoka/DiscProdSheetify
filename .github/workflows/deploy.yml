@@ -16,29 +16,22 @@ jobs:
         runs-on: self-hosted
 
         steps:
-            # Step 1: Check out the repository code into the runner's working directory on the VM.
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            # Step 2: Run the deployment commands directly on the VM's shell.
+            # Run the deployment commands directly on the VM's shell.
             - name: Deploy Bot
               run: |
                 echo "--- Starting deployment on self-hosted runner ---"
 
-                # Use rsync to mirror the repository to the project directory.
-                # CRITICAL: --exclude-from='.gitignore' prevents rsync from deleting
-                # secrets, logs, and virtual environment on the server.
-                rsync -av --delete --exclude-from='.gitignore' ./ /home/makerspace/DiscProdSheetify/
-
-                echo "--- Code synchronized to project directory ---"
-
                 # Run the commands from within the actual project directory.
+                echo "--- Navigating to project directory ---"
                 cd /home/makerspace/DiscProdSheetify
+
+                echo "--- Pulling latest code from main branch ---"
+                git pull origin main
               
-                echo "--- Installing dependencies ---"
+                echo "--- Syncing Python dependencies ---"
                 /home/makerspace/.local/bin/uv sync
 
-                echo "--- Restarting service ---"
+                echo "--- Restarting bot service ---"
                 sudo systemctl restart DiscProdSheetify.service
           
                 echo "--- Deployment complete ---"
