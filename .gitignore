@@ -18,6 +18,3 @@ logs/
 
 # Ignore GitHub Actions runner files
 actions-runner/
-
-# Ignore Git files
-.git/
