@@ -18,5 +18,3 @@ logs/
 
 # Ignore GitHub Actions runner files
 actions-runner/
-
-# Change to test CI/CD workflow
