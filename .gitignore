@@ -18,3 +18,5 @@ logs/
 
 # Ignore GitHub Actions runner files
 actions-runner/
+
+# Testing CI/CD for show and tell.
