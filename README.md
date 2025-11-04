@@ -57,7 +57,7 @@ Follow these instructions to set up and run your own instance of `DiscProdSheeti
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/DiscProdSheetify.git
+git clone https://github.com/Makerspace-Ashoka/DiscProdSheetify.git
 cd DiscProdSheetify
 ```
 
